@@ -1,0 +1,353 @@
+/* 1. ОБЩИЕ СТИЛИ СБРОСА */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Courier New', Courier, monospace;
+    user-select: none;
+}
+
+body {
+    background-color: #1a1a1a;
+    color: #fff;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* 2. ЭКРАН ПОВОРОТА (ДЛЯ МОБИЛОК) */
+.orientation-warning {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: #111;
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.warning-box { padding: 2rem; }
+.rotate-icon { font-size: 4rem; animation: rotate 2s infinite ease-in-out; }
+
+@keyframes rotate {
+    0% { transform: rotate(0deg); }
+    50% { transform: rotate(-90deg); }
+    100% { transform: rotate(0deg); }
+}
+
+@media (orientation: portrait) {
+    .orientation-warning { display: flex; }
+    .game-container { display: none; }
+}
+
+/* 3. ИГРОВОЙ МОНОЛИТ 16:9 */
+.game-container {
+    width: 100vw;
+    height: 100vh;
+    max-width: 177.78vh; 
+    max-height: 56.25vw;
+    background-color: #222;
+    display: flex; 
+    flex-direction: row; 
+    box-shadow: 0 0 30px rgba(0,0,0,0.8);
+    position: relative;
+}
+
+/* ЛЕВАЯ ЧАСТЬ (ИГРА + МАГАЗИН) — КЛЮЧЕВОЙ ФИКС! */
+.main-game-layout {
+    flex: 8; 
+    display: flex;
+    flex-direction: column; 
+    height: 100%;
+}
+
+/* 4. ВЕРХНЯЯ ПОЛОВИНА: ИГРОВОЙ МИР */
+.game-world {
+    height: 65vh; /* Зафиксировали высоту */
+    background: url('assets/images/bg_cave.png') no-repeat;
+    background-size: cover; /* Растягивает картинку на всю пещеру */
+    background-position: center;
+    image-rendering: pixelated; /* Защищает пиксели от размытия */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    border-bottom: 4px solid #111;
+}
+
+
+
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    background: rgba(0,0,0,0.5);
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+/* ОБНОВЛЕННАЯ СЦЕНА ПО СТРУКТУРЕ: РАБОТЯГИ -> ГЕРОЙ -> КОНВЕЙЕР */
+.stage {
+    flex: 1;
+    display: flex;
+    flex-direction: row; /* Всё выстраивается строго в линию */
+    justify-content: space-between; /* Равномерно распределяем зоны */
+    align-items: flex-end; /* Все персонажи и блоки стоят ножками на нижней тропе */
+    padding: 0 2rem 2rem 2rem; /* Отступ снизу, чтобы элементы не прилипали к краю */
+    position: relative;
+    background: rgba(0, 0, 0, 0.15); /* Визуальная симуляция земляной тропы */
+    border-radius: 4px;
+}
+
+/* 1. ЛЕВАЯ ЗОНА: ЗОНА РАБОТЯГ */
+.workers-squad {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    min-width: 120px; /* Фиксируем место, чтобы сцена не прыгала */
+    height: 100px;
+    padding-bottom: 0.5rem;
+}
+
+.worker-mini-sprite {
+    font-size: 2.2rem; /* Сделали прыгающих работяг крупнее */
+    animation: bounce 0.4s infinite alternate ease-in-out;
+}
+
+/* 2. ЦЕНТРАЛЬНАЯ ЗОНА: ГЛАВНЫЙ ГЕРОЙ */
+.hero-zone {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-right: 1rem; /* Легкий отступ от конвейера для сочности */
+}
+
+.hero-sprite {
+    width: 110px;
+    height: 190px;
+    image-rendering: pixelated;
+    transform: scaleX(1); /* Смотрит строго направо */
+}
+
+@keyframes bounce {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-5px); }
+}
+
+/* 3. ПРАВАЯ ЗОНА: ОЧЕРЕДЬ КОНВЕЙЕРА */
+.conveyor {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-end;
+}
+
+.block {
+    width: 6.5rem; /* Сделали блоки больше и сочнее */
+    height: 6.5rem;
+    background: transparent; /* Убрали серый фон, кубики теперь парят на конвейере */
+    border: none; /* Убрали скучную рамку */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    transition: all 0.1s ease;
+}
+
+.block.active-target {
+    transform: scale(1.1);
+    /* Мягкое неоновое свечение вокруг активного куба */
+    filter: drop-shadow(0 0 8px rgba(241, 196, 15, 0.6)); 
+}
+
+
+.hp-bar {
+    position: absolute;
+    top: -12px; left: 0; width: 100%; height: 8px;
+    background: #555;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.hp-fill {
+    height: 100%;
+    background: #e74c3c;
+}
+
+.hp-text {
+    position: absolute;
+    bottom: -16px;
+    font-size: 0.75rem;
+    width: 100%;
+    text-align: center;
+}
+
+.action-zone {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 2.5rem;
+}
+
+.combo-counter {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #f1c40f;
+}
+
+.btn-boss {
+    background: linear-gradient(to bottom, #e74c3c, #c0392b);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 0 0 10px #e74c3c;
+}
+
+/* 6. НИЖНЯЯ ПОЛОВИНА: ИНТЕРФЕЙС МАГАЗИНА */
+.shop-ui {
+    height: 40vh; /* Жестко фиксируем: магазин занимает ровно 40% высоты экрана */
+    background: #2c2c2c;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Защита от вылетов контента */
+}
+
+.shop-tabs {
+    display: flex;
+    background: #1e1e1e;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 0.8rem;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.tab-btn.active {
+    color: #2ecc71;
+    background: #2c2c2c;
+    border-bottom: 3px solid #2ecc71;
+}
+
+.shop-content {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.tab-panel {
+    display: none !important;
+}
+
+.tab-panel.active {
+    display: flex !important;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.shop-card {
+    background: #3a3a3a;
+    border: 2px solid #444;
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.shop-card.available { border-color: #2ecc71; }
+.shop-card.locked { opacity: 0.5; }
+
+.buy-btn {
+    background: #2ecc71;
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.buy-btn:disabled { background: #7f8c8d; cursor: not-allowed; }
+.hidden { display: none !important; }
+
+/* 7. ФИКСИРОВАННАЯ ЗОНА РЕКЛАМЫ (СПРАВА) */
+.yandex-ads-sidebar {
+    flex: 2; /* Занимает ровно 20% от общей ширины */
+    background-color: #111;
+    border-left: 4px solid #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 1rem;
+    color: #555;
+    font-size: 0.8rem;
+    font-weight: bold;
+    border-image: linear-gradient(to bottom, #f1c40f, #e74c3c) 1;
+}
+
+/* ПОП-АП ДИАЛОГОВОЕ ОКНО */
+.dialogue-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.dialogue-modal {
+    background: #2c3e50;
+    border: 4px solid #f1c40f;
+    border-radius: 8px;
+    padding: 1.5rem;
+    max-width: 500px;
+    width: 80%;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8);
+}
+
+.dialogue-text { font-size: 1.1rem; line-height: 1.4; margin-bottom: 1rem; color: #fff; }
+.dialogue-next-btn { background: #f1c40f; color: #000; border: none; padding: 0.5rem 2rem; font-weight: bold; border-radius: 4px; cursor: pointer; }
+
+/* ЭФФЕКТ ДЛЯ СЧЕТЧИКА КОМБО (Пункт 5) */
+.combo-counter {
+    font-size: 1.3rem;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+    transition: opacity 0.3s ease-in-out; /* Плавное исчезновение */
+}
+
+/* УГРОЖАЮЩИЙ ПУЛЬСИРУЮЩИЙ ТАЙМЕР БОССА (Пункт 14) */
+.boss-timer {
+    font-size: 2.5rem; /* Сделали огромным */
+    font-weight: bold;
+    color: #e74c3c;
+    text-shadow: 0 0 15px #e74c3c;
+    position: absolute;
+    top: 30%; left: 50%;
+    transform: translate(-50%, -50%); /* По центру экрана над боссом! */
+    animation: threatPulse 0.5s infinite alternate ease-in-out;
+    z-index: 50;
+}
+
+@keyframes threatPulse {
+    0% { transform: translate(-50%, -50%) scale(1); }
+    100% { transform: translate(-50%, -50%) scale(1.15); }
+}

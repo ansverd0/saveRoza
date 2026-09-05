@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Спасение Розы: Шахта надежды</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="orientation-warning">
+        <div class="warning-box">
+            <div class="rotate-icon">🔄</div>
+            <p>Пожалуйста, переверните устройство горизонтально</p>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <div class="main-game-layout">
+            <div class="game-world">
+                <div class="top-bar">
+                    <div class="stat-item">Чекпоинт: <span id="ui-checkpoint">1</span>/50 (<span id="ui-sublevel">1</span>/5)</div>
+                    <div class="stat-item">🪙 Золото: <span id="ui-gold">0</span></div>
+                    <div class="stat-item">⛏️ Урон: <span id="ui-pick-power">1</span> | ⚔️ Атака: <span id="ui-sword-power">1</span></div>
+                    <div class="stat-item">👥 Доход: <span id="ui-idle-income">0</span>/с</div>
+                </div>
+
+                <div class="dialogue-overlay hidden" id="ui-dialogue-overlay">
+                    <div class="dialogue-modal">
+                        <p class="dialogue-text" id="ui-dialogue-text">Текст диалога...</p>
+                        <button class="dialogue-next-btn" id="ui-dialogue-close">ПОНЯТНО</button>
+                    </div>
+                </div>
+
+                <!-- ЖЁСТКАЯ Flex-ЦЕПОЧКА СЦЕНЫ ПО РАСКАДРОВКЕ -->
+                <div class="stage" id="ui-stage">
+                    <div class="workers-squad" id="ui-workers-squad"></div>
+                    <div class="hero-zone">
+                        <img src="assets/images/hero_idle.png" class="hero-sprite" id="ui-hero-img">
+                    </div>
+                    <div class="conveyor" id="ui-conveyor">
+                        <div class="block active-target">
+                            <div class="hp-bar"><div class="hp-fill" style="width: 100%"></div></div>
+                            <div class="block-sprite">🪨</div>
+                            <div class="hp-text">12/12 HP</div>
+                        </div>
+                        <div class="block">🪨</div>
+                        <div class="block">🪨</div>
+                    </div>
+                </div>
+
+                <div class="action-zone">
+                    <div class="combo-counter" id="ui-combo">COMBO x0</div>
+                    <button class="btn-boss hidden" id="btn-start-boss">⚔️ ВЫЗВАТЬ БОССА</button>
+                    <div class="boss-timer hidden" id="ui-boss-timer">30с</div>
+                </div>
+            </div>
+
+            <div class="shop-ui">
+                <div class="shop-tabs">
+                    <button class="tab-btn active" data-tab="mining">⛏️ ДОБЫЧА</button>
+                    <button class="tab-btn" data-tab="combat">⚔️ БОЙ</button>
+                    <button class="tab-btn" data-tab="workers">👥 НАЙМ</button>
+                </div>
+                <div class="shop-content">
+                    <div class="tab-panel active" id="panel-mining"></div>
+                    <div class="tab-panel" id="panel-combat"></div>
+                    <div class="tab-panel" id="panel-workers"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="yandex-ads-sidebar" id="yandex-rtb-zone">
+            РЕКЛАМА БУДЕТ ЗДЕСЬ<br><br>
+            [Блок Яндекс.Директ RTB]<br><br>
+            (Стань студентом ИТ-Университета в Петрозаводске! 😉)
+        </div>
+    </div>
+
+    <script type="module" src="UI.js"></script>
+</body>
+</html>

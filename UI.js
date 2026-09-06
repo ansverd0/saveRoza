@@ -7,8 +7,29 @@ class UI {
         this.engine = new Engine(this.state);
         this.currentBlockHP = this.engine.getWallHP();
         
-        // Кэш для отслеживания количества работяг (защита от лагов анимации)
+        // Кэш для отслеживания количества работяг
         this.lastWorkersCount = ""; 
+
+        // ИНИЦИАЛИЗАЦИЯ АУДИО-ОБЪЕКТОВ (Чек-лист звуков)
+        this.audioCtx = null; // Для будущих продвинутых эффектов
+        this.bgMusic = new Audio('assets/audio/bg_music.mp3');
+        this.bgMusic.loop = true; // Зацикливаем фоновую музыку
+        this.bgMusic.volume = 0.4; // Музыка должна быть ненавязчивым фоном
+
+        this.sounds = {
+            clickStone: new Audio('assets/audio/sound_click_stone.mp3'),
+            clickMetal: new Audio('assets/audio/sound_click_metal.mp3'),
+            breakBlock: new Audio('assets/audio/sound_break.mp3'),
+            buy: new Audio('assets/audio/sound_buy.mp3'),
+            bossLaugh: new Audio('assets/audio/sound_boss_laugh.mp3'),
+            victory: new Audio('assets/audio/sound_victory.mp3')
+        };
+
+        // Настраиваем громкость эффектов, чтобы они не били по ушам
+        Object.values(this.sounds).forEach(sound => {
+            sound.volume = 0.7;
+        });
+
         this.init();
     }
 
@@ -21,7 +42,15 @@ class UI {
         this.checkStoryDialogue(); 
     }
 
-    // --- 1. РЕГИСТРАЦИЯ КЛИКОВ И НАЖАТИЙ ---
+    // МЕТОД БЕЗОПАСНОГО ВОСПРОИЗВЕДЕНИЯ ЗВУКОВ
+    playSound(soundName) {
+        const sound = this.sounds[soundName];
+        if (sound) {
+            sound.currentTime = 0; // Сбрасываем тайминг в начало (чтобы звук можно было спамить при быстрых кликах)
+            sound.play().catch(err => console.log("Звук заблокирован до клика:", err));
+        }
+    }
+
     registerClickEvents() {
         const conveyorContainer = document.getElementById('ui-conveyor');
         conveyorContainer.addEventListener('click', (e) => this.handleCoreClick(e));
@@ -39,13 +68,11 @@ class UI {
         btnBoss.addEventListener('click', () => this.startBossBattle());
     }
 
-    // БИНД НА ПРОБЕЛ (Пункт 26 плейтеста)
     registerKeyboardEvents() {
         window.addEventListener('keydown', (e) => {
             if (e.key === ' ' || e.code === 'Space') {
-                e.preventDefault(); // Запрещаем прокрутку страницы пробелом
+                e.preventDefault();
                 
-                // Симулируем клик по центру активного блока
                 const activeBlock = document.querySelector('.block.active-target');
                 if (activeBlock) {
                     const rect = activeBlock.getBoundingClientRect();
@@ -59,7 +86,6 @@ class UI {
         });
     }
 
-    // --- 2. ЛОГИКА ИГРОВОГО КЛИКА ---
     handleCoreClick(e) {
         if (!document.getElementById('ui-dialogue-overlay').classList.contains('hidden')) return;
         const now = Date.now();
@@ -70,7 +96,6 @@ class UI {
         }
         this.state.lastClickTime = now;
         
-        // Показываем счетчик комбо при клике
         const comboUi = document.getElementById('ui-combo');
         if (comboUi) comboUi.style.opacity = '1';
         
@@ -84,13 +109,15 @@ class UI {
         if (this.state.gameState === 'MINING') {
             damage = this.engine.getClickPowerPickaxe();
             this.spawnParticles(e, 'gray');
+            this.playSound('clickStone'); // ASMR удар по камню!
             this.state.gold += 1 * this.engine.getOreTierValue(); 
         } else if (this.state.gameState === 'BOSS_FIGHT') {
             damage = this.engine.getClickPowerSword();
             this.spawnParticles(e, 'red');
+            this.playSound('clickMetal'); // Звонкий удар по боссу!
         }
         
-        this.currentBlockHP = Math.max(0, this.currentBlockHP - damage); // Фикс отрицательного ХП (Пункт 3)
+        this.currentBlockHP = Math.max(0, this.currentBlockHP - damage);
         this.spawnDamageText(e, damage);
         
         if (this.currentBlockHP <= 0) {
@@ -100,6 +127,8 @@ class UI {
     }
 
     handleBlockDestruction() {
+        this.playSound('breakBlock'); // Хруст разрушения куба руды!
+
         if (this.state.gameState === 'MINING') {
             this.state.gold += 5 * this.engine.getOreTierValue(); 
             this.state.subLevel++;
@@ -112,7 +141,6 @@ class UI {
             this.state.gold += 25 * this.engine.getOreTierValue();
             this.engine.stopBossTimer();
             
-            // ПРОВЕРКА ФИНАЛА ИГРЫ И ЭКРАНА ПОБЕДЫ
             if (this.state.checkpoint >= 50) {
                 this.showVictoryScreen();
                 return;
@@ -129,8 +157,10 @@ class UI {
         this.updateUI();
     }
 
-    // --- 3. СЮЖЕТНЫЕ ПОП-АПЫ ВМЕСТО ALERT ---
     showVictoryScreen() {
+        this.bgMusic.pause(); // Глушим эмбиент шахты
+        this.playSound('victory'); // Включаем победный марш!
+
         const overlay = document.getElementById('ui-dialogue-overlay');
         const textElem = document.getElementById('ui-dialogue-text');
         const closeBtn = document.getElementById('ui-dialogue-close');
@@ -166,12 +196,20 @@ class UI {
             textElem.textContent = dialogs[currentCheckpoint];
             closeBtn.textContent = "ПОНЯТНО";
             overlay.classList.remove('hidden');
-            closeBtn.onclick = () => { overlay.classList.add('hidden'); };
+
+            closeBtn.onclick = () => { 
+                overlay.classList.add('hidden'); 
+                // АКТИВАЦИЯ МУЗЫКИ ПОСЛЕ ПЕРВОГО КЛИКА ИГРОКА (Обход блокировки браузера!)
+                if (this.bgMusic.paused) {
+                    this.bgMusic.play().catch(e => console.log("Музыка ожидает взаимодействия", e));
+                }
+            };
         }
     }
     startBossBattle() {
         this.currentBlockHP = this.engine.getBossHP();
-        // Фикс отображения 0с на старте (Пункт 10 плейтеста)
+        this.playSound('bossLaugh'); // Грозный рык босса на старте! (Пункт 14)
+        
         const timerBoss = document.getElementById('ui-boss-timer');
         if (timerBoss) timerBoss.textContent = "30с";
         
@@ -182,14 +220,14 @@ class UI {
             },
             () => {
                 this.currentBlockHP = this.engine.getWallHP();
-                this.showBossDefeatScreen(); // Красивый поп-ап вместо alert
+                this.showBossDefeatScreen(); 
                 this.updateUI();
             }
         );
         this.updateUI();
     }
 
-    // --- 4. СОКРАЩЕНИЕ БОЛЬШИХ ЧИСЕЛ БУКВАМИ (Пункт 24 плейтеста) ---
+    // --- 4. СОКРАЩЕНИЕ БОЛЬШИХ ЧИСЕЛ БУКВАМИ ---
     formatNumber(num) {
         if (num >= 1000000) return (num / 1000000).toFixed(1) + 'м';
         if (num >= 1000) return (num / 1000).toFixed(1) + 'к';
@@ -206,11 +244,11 @@ class UI {
             }
         }, 2000);
 
-        // Таймер проверки затухания комбо каждые 100мс (Пункт 5)
+        // Таймер проверки затухания комбо каждые 100мс
         setInterval(() => {
             if (Date.now() - this.state.lastClickTime > 1500) {
                 const comboUi = document.getElementById('ui-combo');
-                if (comboUi) comboUi.style.opacity = '0'; // Скрываем комбо при неактивности
+                if (comboUi) comboUi.style.opacity = '0'; 
                 this.state.comboCount = 0;
             }
         }, 100);
@@ -229,7 +267,7 @@ class UI {
                 { id: 'armor', name: 'Доспех', desc: 'Характеристика: +к урону по боссам', baseKey: 'upgrades_combat', req: { id: 'shield', lvl: 5, name: 'Щит' } }
             ],
             workers: [
-                                { id: 'miner_pakhom', name: 'Дед Пахом', desc: 'Характеристика: пассивный доход золота', baseKey: 'upgrades_workers' },
+                { id: 'miner_pakhom', name: 'Дед Пахом', desc: 'Характеристика: пассивный доход золота', baseKey: 'upgrades_workers' },
                 { id: 'miner_team', name: 'Бригада парней', desc: 'Характеристика: пассивный доход золота', baseKey: 'upgrades_workers', req: { id: 'miner_pakhom', lvl: 5, name: 'Пахома' } },
                 { id: 'miner_golem', name: 'Магический голем', desc: 'Характеристика: пассивный доход золота', baseKey: 'upgrades_workers', req: { id: 'miner_team', lvl: 5, name: 'Бригаду' } }
             ]
@@ -281,9 +319,11 @@ class UI {
         if (this.state.gold >= cost) {
             this.state.gold -= cost;
             this.state[baseKey][id]++;
+            this.playSound('buy'); // Сочный звон монет при покупке!
             this.updateUI();
         }
     }
+
     // --- 5. ВИЗУАЛЬНЫЕ ЭФФЕКТЫ (ПАРТИКЛЫ) ---
     spawnParticles(e, color) {
         const stage = document.querySelector('.stage');
@@ -361,6 +401,7 @@ class UI {
         const activePanel = document.getElementById(`panel-${tabName}`);
         if (activePanel) activePanel.classList.add('active');
     }
+
     // --- 6. СВЕРХОПТИМИЗИРОВАННЫЙ ОБНОВИТЕЛЬ UI ---
     updateUI() {
         document.getElementById('ui-gold').textContent = this.formatNumber(this.state.gold);
@@ -371,7 +412,6 @@ class UI {
             subUi.textContent = this.state.gameState === 'BOSS_FIGHT' ? 'БОСС' : `${Math.min(5, this.state.subLevel)}`;
         }
         
-        // Округляем дробную математическую силу для красивого вывода (Пункт 3, 7)
         document.getElementById('ui-pick-power').textContent = this.formatNumber(Math.ceil(this.engine.getClickPowerPickaxe()));
         document.getElementById('ui-sword-power').textContent = this.formatNumber(Math.ceil(this.engine.getClickPowerSword()));
         document.getElementById('ui-idle-income').textContent = this.formatNumber(this.engine.getIdleIncome());
@@ -386,7 +426,7 @@ class UI {
                 comboUi.style.color = '#f1c40f';
                 document.querySelector('.game-world').classList.remove('screen-shake');
             } else {
-                comboUi.style.color = '#2ecc71'; // Лайтовый зеленый комбо (Пункт 4)
+                comboUi.style.color = '#2ecc71'; 
                 document.querySelector('.game-world').classList.remove('screen-shake');
             }
         }
@@ -398,7 +438,7 @@ class UI {
             if (this.state.gameState === 'BOSS_WAIT') {
                 btnBoss.classList.remove('hidden');
                 timerBoss.classList.add('hidden');
-            } else if (this.state.gameState === 'BOSS_FIGHT') {
+                        } else if (this.state.gameState === 'BOSS_FIGHT') {
                 btnBoss.classList.add('hidden');
                 timerBoss.classList.remove('hidden');
             } else {
@@ -407,46 +447,43 @@ class UI {
             }
         }
 
-                const activeBlock = document.querySelector('.block.active-target');
+        // Рендеринг здоровья активного блока и смена картинок кубов
+        const activeBlock = document.querySelector('.block.active-target');
         if (activeBlock) {
             const maxHP = this.state.gameState === 'BOSS_FIGHT' ? this.engine.getBossHP() : this.engine.getWallHP();
             const percent = (this.currentBlockHP / maxHP) * 100;
             activeBlock.querySelector('.hp-fill').style.width = `${percent}%`;
             
-            // Вывод красивого округленного ХП (Пункт 12 плейтеста)
             activeBlock.querySelector('.hp-text').textContent = `${this.formatNumber(this.currentBlockHP)}/${this.formatNumber(maxHP)} HP`;
             
-            // ДИНАМИЧЕСКАЯ СМЕНА ТЕКСТУР КУБОВ ПО ТЗ
             const blockSpriteContainer = activeBlock.querySelector('.block-sprite');
             if (blockSpriteContainer) {
-                blockSpriteContainer.innerHTML = ''; // Очищаем старый текст
+                blockSpriteContainer.innerHTML = ''; 
                 
                 const blockImg = document.createElement('img');
-                blockImg.style.width = '70px'; // Сделали кубики крупнее по плейтесту
+                blockImg.style.width = '70px'; 
                 blockImg.style.height = '70px';
-                blockImg.style.imageRendering = 'pixelated'; // Защита от мыла
+                blockImg.style.imageRendering = 'pixelated'; 
                 
                 if (this.state.gameState === 'BOSS_FIGHT') {
-                    // На 50 чекпоинте — Кристалл, на остальных боссах — Монстр
                     blockImg.src = this.state.checkpoint >= 50 ? 'assets/images/block_crystal.png' : 'assets/images/block_boss.png';
                 } else {
                     const cp = this.state.checkpoint;
                     if (cp <= 15) {
-                        blockImg.src = 'assets/images/block_stone.png';     // Камень (1-15)
+                        blockImg.src = 'assets/images/block_stone.png';     
                     } else if (cp <= 30) {
-                        blockImg.src = 'assets/images/block_iron.png';      // Железо (16-30)
+                        blockImg.src = 'assets/images/block_iron.png';      
                     } else if (cp <= 45) {
-                        blockImg.src = 'assets/images/block_gold.png';      // Золото (31-45)
+                        blockImg.src = 'assets/images/block_gold.png';      
                     } else {
-                        blockImg.src = 'assets/images/block_diamond.png';   // Алмаз (46-50)
+                        blockImg.src = 'assets/images/block_diamond.png';   
                     }
                 }
                 blockSpriteContainer.appendChild(blockImg);
             }
         }
 
-
-                // ДИНАМИЧЕСКИЙ СПАВН РАБОТЯГ НА ТРОПЕ (ИСПРАВЛЕННЫЙ БАГ)
+        // ДИНАМИЧЕСКИЙ СПАВН РАБОТЯГ НА ТРОПЕ ПО РАСКАДРОВКЕ
         const squadContainer = document.getElementById('ui-workers-squad');
         if (squadContainer) {
             const pakhomCount = this.state.upgrades_workers.miner_pakhom;
@@ -458,57 +495,32 @@ class UI {
                 this.lastWorkersCount = currentString;
                 squadContainer.innerHTML = '';
 
-                // 1. РЕНДЕРИМ ДЕДОВ ПАХОМОВ (КАРТИНКИ)
+                // Лимиты по уровням: 1-й на 1ур, 2-й на 10ур, 3-й на 25ур
                 const pakhomSprites = pakhomCount >= 25 ? 3 : (pakhomCount >= 10 ? 2 : (pakhomCount >= 1 ? 1 : 0));
                 for (let i = 0; i < pakhomSprites; i++) {
-                    const w = document.createElement('div'); // ОБЪЯВЛЯЕМ КОНТЕЙНЕР
-                    w.className = 'worker-mini-sprite';
-                    
-                    const img = document.createElement('img');
-                    img.src = 'assets/images/worker_pakhom.png';
-                    img.style.width = '32px'; 
-                    img.style.height = '32px';
-                    img.style.imageRendering = 'pixelated';
-                    
-                    w.appendChild(img);
-                    squadContainer.appendChild(w);
+                    const w = document.createElement('div'); w.className = 'worker-mini-sprite'; 
+                    const img = document.createElement('img'); img.src = 'assets/images/worker_pakhom.png';
+                    img.style.width = '32px'; img.style.height = '32px'; img.style.imageRendering = 'pixelated';
+                    w.appendChild(img); squadContainer.appendChild(w);
                 }
 
-                                // 2. РЕНДЕРИМ СИЛЬНЫХ ПАРНЕЙ (ТЕПЕРЬ КАРТИНКИ)
                 const teamSprites = teamCount >= 25 ? 2 : (teamCount >= 1 ? 1 : 0);
                 for (let i = 0; i < teamSprites; i++) {
-                    const w = document.createElement('div');
-                    w.className = 'worker-mini-sprite';
-                    
-                    const img = document.createElement('img');
-                    img.src = 'assets/images/worker_team.png';
-                    img.style.width = '34px'; // Чуть крупнее деда Пахома
-                    img.style.height = '34px';
-                    img.style.imageRendering = 'pixelated';
-                    
-                    w.appendChild(img);
-                    squadContainer.appendChild(w);
+                    const w = document.createElement('div'); w.className = 'worker-mini-sprite'; 
+                    const img = document.createElement('img'); img.src = 'assets/images/worker_team.png';
+                    img.style.width = '34px'; img.style.height = '34px'; img.style.imageRendering = 'pixelated';
+                    w.appendChild(img); squadContainer.appendChild(w);
                 }
 
-
-                // 3. РЕНДЕРИМ МАГАЗИННЫХ ГОЛЕМОВ (КАРТИНКИ)
                 const golemSprites = golemCount >= 25 ? 2 : (golemCount >= 1 ? 1 : 0);
                 for (let i = 0; i < golemSprites; i++) {
-                    const w = document.createElement('div'); // ОБЪЯВЛЯЕМ КОНТЕЙНЕР
-                    w.className = 'worker-mini-sprite';
-                    
-                    const img = document.createElement('img');
-                    img.src = 'assets/images/worker_golem.png';
-                    img.style.width = '42px'; // Голем пусть будет чуть крупнее деда!
-                    img.style.height = '42px';
-                    img.style.imageRendering = 'pixelated';
-                    
-                    w.appendChild(img);
-                    squadContainer.appendChild(w);
+                    const w = document.createElement('div'); w.className = 'worker-mini-sprite'; 
+                    const img = document.createElement('img'); img.src = 'assets/images/worker_golem.png';
+                    img.style.width = '42px'; img.style.height = '42px'; img.style.imageRendering = 'pixelated';
+                    w.appendChild(img); squadContainer.appendChild(w);
                 }
             }
         }
-
 
         this.renderShop();
     }
